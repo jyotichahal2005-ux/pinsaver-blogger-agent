@@ -34,7 +34,7 @@ permissions:
 
 defaults:
   run:
-    working-directory: blogger-agent
+    working-directory: .
 
 jobs:
   publish:
