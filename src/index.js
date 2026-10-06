@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 import { generatePost, generateTopicVariation, countWords } from './generateContent.js';
 import { BloggerClient, resolvePostUrl } from './publishToBlogger.js';
+import { fetchCoverImage, buildImageHtml } from './fetchImage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -88,13 +89,37 @@ async function main() {
 
   const topic = await pickTopic({ config, history, groqApiKey, site, args, log });
 
+  const topicTitle = typeof topic === 'string' ? topic : topic.title;
+
+  log('\nFetching cover image...');
+  let coverImageHtml = '';
+  try {
+    const imageProvider = process.env.IMAGE_PROVIDER || 'pexels';
+    const imageApiKey = process.env.PEXELS_API_KEY || process.env.UNSPLASH_API_KEY;
+    if (imageApiKey) {
+      const image = await fetchCoverImage({
+        topic: topicTitle,
+        apiKey: imageApiKey,
+        provider: imageProvider,
+        logger: log,
+      });
+      coverImageHtml = buildImageHtml(image, topicTitle);
+      log(`  cover image fetched from ${image.provider}`);
+    } else {
+      log('  no image API key configured, skipping cover image');
+    }
+  } catch (err) {
+    log(`  [warn] failed to fetch cover image: ${err.message}`);
+  }
+
   log('\nGenerating post...');
   const post = await generatePost({
     apiKey: groqApiKey,
-    topic: typeof topic === 'string' ? topic : topic.title,
+    topic: topicTitle,
     site,
     audience: config.audience,
     labels: DEFAULT_LABELS,
+    coverImageHtml,
   });
 
   log(`\nTitle        : ${post.title}`);

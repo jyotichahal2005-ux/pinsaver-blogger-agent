@@ -11,22 +11,24 @@ the whole setup: daily content on a real blog pointing at the product site.
 ## How a run works
 
 ```
-pick unused topic  ->  write post (Groq)  ->  QA  ->  publish (Blogger)  ->  log
+pick unused topic  ->  fetch cover image  ->  write post (Groq)  ->  QA  ->  publish (Blogger)  ->  log
 ```
 
 1. **Topic selection** - walks `config/topics.json` in order and takes the first
    topic not present in `logs/published.json`. When all 20 are used up it asks
    Groq for a fresh angle on the least-recently-used base topic.
-2. **Generation** - `src/generateContent.js` writes an 800-1200 word article as
+2. **Cover image** - fetches a relevant landscape photo from Pexels or Unsplash
+   based on the post topic, with photographer attribution.
+3. **Generation** - `src/generateContent.js` writes an 800-1200 word article as
    HTML, with headings, steps, a troubleshooting section, an FAQ, and several
-   anchor links to the product URL.
-3. **QA** - the draft is checked for word count, site links, and headings. If it
+   anchor links to the product URL. The cover image is embedded at the top.
+4. **QA** - the draft is checked for word count, site links, and headings. If it
    fails, the model gets its own draft back with specific complaints and one
    rewrite attempt. Unclosed HTML tags are repaired automatically, and if the
    model replies in Markdown it is converted to HTML.
-4. **Publish** - `src/publishToBlogger.js` swaps the refresh token for an access
+5. **Publish** - `src/publishToBlogger.js` swaps the refresh token for an access
    token and creates a `publish` status post via Blogger API v3.
-5. **Log** - the entry is appended to `logs/published.json`, which the workflow
+6. **Log** - the entry is appended to `logs/published.json`, which the workflow
    commits back to the repo so history survives the next checkout.
 
 ## Project layout
@@ -78,7 +80,7 @@ if it prints the blog name you know Blogger access works.
 ### 2. Add the GitHub Actions secrets
 
 Go to your repo: **Settings -> Secrets and variables -> Actions -> New
-repository secret**. Add these five:
+repository secret**. Add these seven:
 
 | Secret name | Value |
 |---|---|
@@ -87,6 +89,15 @@ repository secret**. Add these five:
 | `GOOGLE_CLIENT_SECRET` | starts `GOCSPX-` |
 | `GOOGLE_REFRESH_TOKEN` | printed by step 1, starts `1//` |
 | `BLOGGER_BLOG_ID` | `7265988019810439292` |
+| `PEXELS_API_KEY` | free at https://www.pexels.com/api/ (recommended) |
+| `UNSPLASH_API_KEY` | free at https://unsplash.com/developers (alternative) |
+
+**Image API setup (choose one):**
+
+- **Pexels** (recommended): Sign up at https://www.pexels.com/api/, create an app, get your API key. Free tier: 200 requests/hour, 20,000/month.
+- **Unsplash**: Register at https://unsplash.com/developers, create an app, get your Access Key. Demo tier: 50 requests/hour, 5,000/month.
+
+Set `IMAGE_PROVIDER=pexels` (default) or `unsplash` to choose.
 
 None of these belong in the repository. The code reads them from the
 environment only.

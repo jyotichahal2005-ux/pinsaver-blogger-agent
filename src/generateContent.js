@@ -86,7 +86,7 @@ export async function generateTopicVariation({ apiKey, baseTopic, usedTopics = [
  * draft is QA'd and, if it fails, the model is sent its own draft back with
  * specific complaints and asked for a full rewrite.
  */
-export async function generatePost({ apiKey, topic, site, audience, labels = [], model, logger }) {
+export async function generatePost({ apiKey, topic, site, audience, labels = [], model, logger, coverImageHtml }) {
   const log = logger || console.log.bind(console);
   log(`  writing post: "${topic}"`);
 
@@ -98,7 +98,7 @@ export async function generatePost({ apiKey, topic, site, audience, labels = [],
         'human-sounding how-to guides. You never pad word count with filler and you ' +
         'always emit complete, correctly closed HTML.',
     },
-    { role: 'user', content: buildPostPrompt({ topic, site, audience, labels }) },
+    { role: 'user', content: buildPostPrompt({ topic, site, audience, labels, coverImageHtml }) },
   ];
 
   let result = null;
@@ -225,7 +225,11 @@ function buildRepairPrompt(issues, site) {
   ].join('\n');
 }
 
-function buildPostPrompt({ topic, site, audience, labels }) {
+function buildPostPrompt({ topic, site, audience, labels, coverImageHtml }) {
+  const coverImageSection = coverImageHtml
+    ? `\n\nCOVER IMAGE (already provided, embed at the very top of the post):\n${coverImageHtml}\n`
+    : '';
+
   return [
     `Write one complete SEO blog post for the topic: "${topic}"`,
     '',
@@ -241,7 +245,7 @@ function buildPostPrompt({ topic, site, audience, labels }) {
     '  so aim for 950-1100 words to clear the bar comfortably. Do not pad with filler.',
     '- Format: clean, correctly closed HTML that Blogger will accept.',
     '- Every opening tag must have its closing tag. Never end mid-sentence or leave a <p> unclosed.',
-    `- Start with a short intro paragraph (2-3 sentences) that states what the reader will achieve and includes the focus phrase.`,
+    '- Start with a short intro paragraph (2-3 sentences) that states what the reader will achieve and includes the focus phrase.',
     '- Write at least 6 <h2> sections. Each one needs 120+ words of real explanation, not two sentences.',
     '- Use <h3> subheadings where a section has distinct sub-points.',
     '- Use numbered <ol><li> steps for any procedure, and <ul><li> for tips or lists.',
@@ -269,6 +273,7 @@ function buildPostPrompt({ topic, site, audience, labels }) {
     '',
     'REPLY WITH JSON ONLY, no markdown fence, in exactly this shape:',
     '{"title":"...","metaDescription":"...under 160 characters...","content":"<p>...</p><h2>...</h2>..."}',
+    coverImageSection,
   ].join('\n');
 }
 
